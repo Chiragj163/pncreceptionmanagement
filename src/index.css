@@ -1,0 +1,100 @@
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background-color: #f5f6f8;
+}
+
+button {
+  cursor: pointer;
+}
+
+.card {
+  border-radius: 12px;
+}
+
+.table th {
+  font-weight: 600;
+}
+
+
+
+@media print {
+
+  body {
+    background: white !important;
+  }
+
+  /* Hide everything by default */
+  body * {
+    visibility: hidden;
+  }
+
+  /* Show only visitor pass */
+  #visitor-pass,
+  #visitor-pass * {
+    visibility: visible;
+  }
+
+  #visitor-pass {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    box-shadow: none !important;
+    border: 1px solid #000 !important;
+  }
+
+  /* Hide buttons while printing */
+  button {
+    display: none !important;
+  }
+
+}
+
+/* =========================
+   Report Printing
+   ========================= */
+
+@media print {
+
+  body {
+    background: white !important;
+  }
+
+  body * {
+    visibility: hidden;
+  }
+
+  #print-report,
+  #print-report * {
+    visibility: visible;
+  }
+
+  #print-report {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
+
+  #print-report .card {
+    box-shadow: none !important;
+    border: none !important;
+  }
+
+  #print-report button {
+    display: none !important;
+  }
+
+  #print-report table {
+    width: 100%;
+    font-size: 11px;
+  }
+
+  #print-report .badge {
+    border: 1px solid #000;
+    color: #000 !important;
+    background: white !important;
+  }
+
+}
