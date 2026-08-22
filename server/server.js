@@ -1,5 +1,6 @@
 require("dotenv").config();
 const express = require("express");
+const path = require("path");
 const cors = require("cors");
 const settingsRoutes = require("./routes/settingsRoutes");
 const db = require("./db");
@@ -14,11 +15,11 @@ const PORT = process.env.PORT || 5001;
 app.use(cors());
 app.use(express.json());
 
-app.get("/", (req, res) => {
-    res.json({
-        message: "Reception Management API is running"
-    });
-});
+// app.get("/", (req, res) => {
+//     res.json({
+//         message: "Reception Management API is running"
+//     });
+// });
 
 app.get("/api/test-db", (req, res) => {
 
@@ -49,6 +50,8 @@ app.get("/api/test-db", (req, res) => {
 app.use("/api/visitors", authenticateToken, visitorRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/users", authenticateToken, requireAdmin, userRoutes);
+const frontendPath = path.join(__dirname, "..", "dist");
+app.use(express.static(frontendPath));
 app.use("/api/settings", authenticateToken, requireAdmin, settingsRoutes);
 
 app.listen(

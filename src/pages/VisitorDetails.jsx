@@ -160,63 +160,35 @@ const parseDetailsAndMembers = () => {
         style={{ maxWidth: "680px" }}
       >
         {/* Pass Header Banner */}
-        {/* Pass Header Banner */}
-<div className="bg-primary bg-opacity-10 border-bottom border-primary border-opacity-10 p-4">
-  <div className="position-relative d-flex align-items-center justify-content-between">
+        <div className="bg-primary bg-opacity-10 border-bottom border-primary border-opacity-10 p-4">
+          <div className="position-relative d-flex align-items-center justify-content-between">
+            <div className="d-flex align-items-center">
+              <div
+                className="bg-white p-2 rounded-3 shadow-sm border d-flex align-items-center justify-content-center"
+                style={{ width: "48px", height: "48px" }}
+              >
+                <img
+                  src="/images.svg"
+                  alt="Logo"
+                  className="object-fit-contain"
+                  style={{ width: "52px", height: "52px" }}
+                />
+              </div>
+              <div className="position-absolute top-50 start-50 translate-middle text-center" style={{ whiteSpace: "nowrap" }}>
+                <h5 className="fw-bold mb-0 text-dark" style={{ letterSpacing: "0.5px" }}>VISITOR PASS</h5>
+                <span className={`badge mt-1 ${isGroup ? "bg-primary text-white" : "bg-light text-dark border"}`} style={{ fontSize: "0.75rem" }}>
+                  {isGroup ? `Group Pass (${totalGroupCount} Persons)` : "Single Visitor Pass"}
+                </span>
+              </div>
+            </div>
 
-    {/* Logo - Left */}
-    <div className="d-flex align-items-center">
-      <div
-        className="bg-white p-2 rounded-3 shadow-sm border d-flex align-items-center justify-content-center"
-        style={{ width: "48px", height: "48px" }}
-      >
-        <img
-          src="/images.svg"
-          alt="Logo"
-          className="object-fit-contain"
-          style={{ width: "52px", height: "52px" }}
-        />
-      </div>
-    </div>
-
-    {/* Center - Visitor Pass */}
-    <div
-      className="position-absolute top-50 start-50 translate-middle text-center"
-      style={{ whiteSpace: "nowrap" }}
-    >
-      <h5
-        className="fw-bold mb-0 text-dark"
-        style={{ letterSpacing: "0.5px" }}
-      >
-        VISITOR PASS
-      </h5>
-
-      <span
-        className={`badge mt-1 ${
-          isGroup
-            ? "bg-primary text-white"
-            : "bg-light text-dark border"
-        }`}
-        style={{ fontSize: "0.75rem" }}
-      >
-        {isGroup
-          ? `Group Pass (${totalGroupCount} Persons)`
-          : "Single Visitor Pass"}
-      </span>
-    </div>
-
-    {/* ID - Right */}
-    <div className="text-end">
-      <span
-        className="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 rounded-pill px-3 py-2 fw-bold"
-        style={{ fontSize: "0.85rem" }}
-      >
-        ID: #{visitor.id}
-      </span>
-    </div>
-
-  </div>
-</div>
+            <div className="text-end">
+              <span className="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 rounded-pill px-3 py-2 fw-bold" style={{ fontSize: "0.85rem" }}>
+                ID: #{visitor.id}
+              </span>
+            </div>
+          </div>
+        </div>
 
         {/* Card Body Details */}
         <div className="card-body p-4 p-md-5">
