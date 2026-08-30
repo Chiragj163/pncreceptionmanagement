@@ -63,7 +63,7 @@ function Reports() {
       "Visitor ID": visitor.id,
       "Visitor Name": visitor.visitor_name,
       "Mobile": visitor.mobile || "",
-      "Address": visitor.address || "",
+      // "Address": visitor.address || "",
       "Company": visitor.company_name || "",
       "Purpose": visitor.purpose || "",
       "Person To Meet": visitor.person_to_meet || "",

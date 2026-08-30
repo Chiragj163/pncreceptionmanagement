@@ -31,7 +31,7 @@ function App() {
   const handleLogin = (loggedInUser) => {
     setUser(loggedInUser);
     setSelectedVisitorId(null);
-    setActivePage("Dashboard"); // Guarantee Dashboard opens first
+    setActivePage("Dashboard");
   };
 
   const handleLogout = () => {

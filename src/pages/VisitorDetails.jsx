@@ -417,7 +417,7 @@ function formatDateTime(dateString) {
   try {
     const date = new Date(dateString);
     return date.toLocaleString("en-IN", {
-      dateStyle: "medium",
+      // dateStyle: "medium",
       timeStyle: "short"
     });
   } catch {
