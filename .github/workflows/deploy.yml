@@ -103,7 +103,7 @@ jobs:
           }
 
           Write-Host "PM2 restart task triggered successfully"
-
+          Start-Sleep -Seconds 5
       # --------------------------------------------------
       # 7. Wait for API to restart
       # --------------------------------------------------
