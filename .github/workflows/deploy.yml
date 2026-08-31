@@ -1,0 +1,105 @@
+name: Deploy Reception Management
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+
+    steps:
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Deploy application files
+        shell: powershell
+        run: |
+          $source = "$env:GITHUB_WORKSPACE"
+          $destination = "C:\ReceptionManagement"
+
+          Write-Host "Source: $source"
+          Write-Host "Destination: $destination"
+
+          if (-not (Test-Path $destination)) {
+              New-Item -ItemType Directory -Path $destination -Force
+          }
+
+          robocopy $source $destination /E /XD .git node_modules dist /XF .env
+
+          $exitCode = $LASTEXITCODE
+
+          if ($exitCode -gt 7) {
+              throw "Robocopy failed with exit code $exitCode"
+          }
+
+          $global:LASTEXITCODE = 0
+
+      - name: Install frontend dependencies
+        shell: powershell
+        run: |
+          Set-Location "C:\ReceptionManagement"
+          npm install
+
+      - name: Install backend dependencies
+        shell: powershell
+        run: |
+          Set-Location "C:\ReceptionManagement\server"
+          npm install
+
+      - name: Build frontend
+        shell: powershell
+        run: |
+          Set-Location "C:\ReceptionManagement"
+          npm run build
+
+      - name: Restart API
+        shell: powershell
+        run: |
+          pm2 restart reception-api
+
+      - name: Wait for API
+        shell: powershell
+        run: |
+          Start-Sleep -Seconds 3
+
+      - name: Test API
+        shell: powershell
+        run: |
+          $url = "http://localhost/reception/api/test-db"
+
+          try {
+              $response = Invoke-WebRequest `
+                  -Uri $url `
+                  -UseBasicParsing `
+                  -TimeoutSec 10
+
+              Write-Host "HTTP Status: $($response.StatusCode)"
+              Write-Host "Response: $($response.Content)"
+
+              if ($response.StatusCode -ne 200) {
+                  throw "API returned HTTP $($response.StatusCode)"
+              }
+
+              if ($response.Content -notmatch '"success":true') {
+                  throw "Database/API health check failed"
+              }
+
+          } catch {
+              Write-Error "API health check failed: $_"
+              exit 1
+          }
+
+      - name: Save PM2 process list
+        shell: powershell
+        run: |
+          pm2 save
+
+      - name: Deployment completed
+        shell: powershell
+        run: |
+          Write-Host "=========================================="
+          Write-Host " Reception Management deployment SUCCESS "
+          Write-Host "=========================================="
