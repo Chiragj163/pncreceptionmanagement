@@ -120,7 +120,7 @@ function Sidebar({ activePage, setActivePage, onLogout, user, isCollapsed, setIs
         {isCollapsed ? (
           /* Show image at top when closed */
           <img 
-            src="/images.svg" 
+            src="/reception/images.svg" 
             alt="Logo" 
             className="rounded-3 object-fit-contain" 
             style={{ width: "36px", height: "36px" }} 

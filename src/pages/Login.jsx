@@ -93,7 +93,7 @@ function Login({ onLogin }) {
               style={{ width: "56px", height: "56px" }}
             >
               <img 
-                src="/images.svg" 
+                src="/reception/images.svg" 
                 alt="Logo" 
                 className="object-fit-contain" 
                 style={{ width: "36px", height: "36px" }} 

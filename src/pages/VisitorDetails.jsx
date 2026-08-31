@@ -168,7 +168,7 @@ const parseDetailsAndMembers = () => {
                 style={{ width: "48px", height: "48px" }}
               >
                 <img
-                  src="/images.svg"
+                  src="/reception/images.svg"
                   alt="Logo"
                   className="object-fit-contain"
                   style={{ width: "52px", height: "52px" }}

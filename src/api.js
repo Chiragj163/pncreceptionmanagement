@@ -1,4 +1,4 @@
-const API_URL = "http://192.168.100.189:5001";
+const API_URL = "/reception";
 
 export async function apiFetch(
     endpoint,
