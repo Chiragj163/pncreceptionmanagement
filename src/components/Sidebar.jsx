@@ -131,7 +131,7 @@ function Sidebar({ activePage, setActivePage, onLogout, user, isCollapsed, setIs
           <>
             <div className="d-flex align-items-center gap-3 overflow-hidden">
               <img 
-                src="/images.svg" 
+                src="/reception/images.svg" 
                 alt="Logo" 
                 className="rounded-3 object-fit-contain flex-shrink-0" 
                 style={{ width: "36px", height: "36px" }} 
