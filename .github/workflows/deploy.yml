@@ -38,7 +38,7 @@ jobs:
             $destination `
             /E `
             /XD .git node_modules dist `
-            /XF .env
+            /XF .env server\.env
 
           $exitCode = $LASTEXITCODE
 
@@ -103,14 +103,50 @@ jobs:
           }
 
           Write-Host "PM2 restart task triggered successfully"
-          Start-Sleep -Seconds 5
+
       # --------------------------------------------------
-      # 7. Wait for API to restart
+      # 7. Wait until API is healthy
       # --------------------------------------------------
       - name: Wait for API
         shell: powershell
         run: |
-          Start-Sleep -Seconds 5
+          $url = "http://localhost/reception/api/test-db"
+
+          Write-Host "Waiting for API..."
+
+          $healthy = $false
+
+          for ($i = 1; $i -le 12; $i++) {
+
+              try {
+
+                  $response = Invoke-WebRequest `
+                      -Uri $url `
+                      -UseBasicParsing `
+                      -TimeoutSec 5
+
+                  Write-Host "Attempt $i - HTTP $($response.StatusCode)"
+
+                  if (
+                      $response.StatusCode -eq 200 -and
+                      $response.Content -match '"success":true'
+                  ) {
+                      Write-Host "API is healthy."
+                      $healthy = $true
+                      break
+                  }
+
+              } catch {
+
+                  Write-Host "Attempt $i - API not ready yet..."
+              }
+
+              Start-Sleep -Seconds 2
+          }
+
+          if (-not $healthy) {
+              throw "API did not become healthy within 24 seconds"
+          }
 
       # --------------------------------------------------
       # 8. Test production API through IIS
@@ -147,7 +183,7 @@ jobs:
           }
 
       # --------------------------------------------------
-      # 9. Verify PM2 process
+      # 9. Verify API port
       # --------------------------------------------------
       - name: Verify API process
         shell: powershell
