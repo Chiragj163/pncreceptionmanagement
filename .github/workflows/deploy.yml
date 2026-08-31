@@ -11,9 +11,15 @@ jobs:
 
     steps:
 
+      # --------------------------------------------------
+      # 1. Checkout latest GitHub code
+      # --------------------------------------------------
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # --------------------------------------------------
+      # 2. Copy source code to production server folder
+      # --------------------------------------------------
       - name: Deploy application files
         shell: powershell
         run: |
@@ -27,9 +33,16 @@ jobs:
               New-Item -ItemType Directory -Path $destination -Force
           }
 
-          robocopy $source $destination /E /XD .git node_modules dist /XF .env
+          robocopy `
+            $source `
+            $destination `
+            /E `
+            /XD .git node_modules dist `
+            /XF .env
 
           $exitCode = $LASTEXITCODE
+
+          Write-Host "Robocopy exit code: $exitCode"
 
           if ($exitCode -gt 7) {
               throw "Robocopy failed with exit code $exitCode"
@@ -37,38 +50,77 @@ jobs:
 
           $global:LASTEXITCODE = 0
 
+      # --------------------------------------------------
+      # 3. Install frontend dependencies
+      # --------------------------------------------------
       - name: Install frontend dependencies
         shell: powershell
         run: |
           Set-Location "C:\ReceptionManagement"
+
           npm install
 
+      # --------------------------------------------------
+      # 4. Install backend dependencies
+      # --------------------------------------------------
       - name: Install backend dependencies
         shell: powershell
         run: |
           Set-Location "C:\ReceptionManagement\server"
+
           npm install
 
+      # --------------------------------------------------
+      # 5. Build React frontend
+      #    This also copies web.config to dist/
+      # --------------------------------------------------
       - name: Build frontend
         shell: powershell
         run: |
           Set-Location "C:\ReceptionManagement"
+
           npm run build
 
+          if (-not (Test-Path "C:\ReceptionManagement\dist\web.config")) {
+              throw "dist\web.config was not created"
+          }
+
+          Write-Host "Frontend build completed successfully"
+          Write-Host "web.config found in dist"
+
+      # --------------------------------------------------
+      # 6. Restart PM2 using Administrator scheduled task
+      # --------------------------------------------------
       - name: Restart API
         shell: powershell
         run: |
-          pm2 restart reception-api
+          Write-Host "Restarting Reception API..."
 
+          schtasks /Run /TN "Reception Management - PM2 Restart"
+
+          if ($LASTEXITCODE -ne 0) {
+              throw "Failed to trigger PM2 restart scheduled task"
+          }
+
+          Write-Host "PM2 restart task triggered successfully"
+
+      # --------------------------------------------------
+      # 7. Wait for API to restart
+      # --------------------------------------------------
       - name: Wait for API
         shell: powershell
         run: |
-          Start-Sleep -Seconds 3
+          Start-Sleep -Seconds 5
 
+      # --------------------------------------------------
+      # 8. Test production API through IIS
+      # --------------------------------------------------
       - name: Test API
         shell: powershell
         run: |
           $url = "http://localhost/reception/api/test-db"
+
+          Write-Host "Testing API: $url"
 
           try {
               $response = Invoke-WebRequest `
@@ -87,16 +139,33 @@ jobs:
                   throw "Database/API health check failed"
               }
 
+              Write-Host "API health check PASSED"
+
           } catch {
               Write-Error "API health check failed: $_"
               exit 1
           }
 
-      - name: Save PM2 process list
+      # --------------------------------------------------
+      # 9. Verify PM2 process
+      # --------------------------------------------------
+      - name: Verify API process
         shell: powershell
         run: |
-          pm2 save
+          $connection = Get-NetTCPConnection `
+              -LocalPort 5001 `
+              -State Listen `
+              -ErrorAction SilentlyContinue
 
+          if (-not $connection) {
+              throw "Nothing is listening on port 5001"
+          }
+
+          Write-Host "Port 5001 is listening"
+
+      # --------------------------------------------------
+      # 10. Deployment successful
+      # --------------------------------------------------
       - name: Deployment completed
         shell: powershell
         run: |
