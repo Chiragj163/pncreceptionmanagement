@@ -67,6 +67,7 @@ function Reports() {
       "Company": visitor.company_name || "",
       "Purpose": visitor.purpose || "",
       "Person To Meet": visitor.person_to_meet || "",
+      "Created By": visitor.created_by_name || "",
       "Visit Date": formatDate(visitor.visit_date),
       "In Time": formatDateTime(visitor.in_time),
       "Out Time": visitor.out_time ? formatDateTime(visitor.out_time) : "",
@@ -348,6 +349,7 @@ function Reports() {
                         <th className="fw-semibold border-0">Company</th>
                         <th className="fw-semibold border-0">Purpose</th>
                         <th className="fw-semibold border-0">Host</th>
+                        <th className="fw-semibold border-0">Created By</th>
                         <th className="fw-semibold border-0">Date</th>
                         <th className="fw-semibold border-0">In / Out</th>
                         <th className="fw-semibold border-0">Duration</th>
@@ -367,6 +369,7 @@ function Reports() {
                           <td className="text-secondary">{visitor.company_name || "—"}</td>
                           <td className="text-secondary">{visitor.purpose}</td>
                           <td className="text-dark fw-medium">{visitor.person_to_meet}</td>
+                          <td className="text-dark fw-medium">({visitor.created_by_name || "-"})</td>
                           <td className="text-secondary fw-medium">{formatDate(visitor.visit_date)}</td>
                           <td className="text-secondary" style={{ fontSize: "0.85rem" }}>
                             <span className="text-dark">{formatTime(visitor.in_time)}</span>
