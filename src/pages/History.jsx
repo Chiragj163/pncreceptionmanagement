@@ -275,6 +275,7 @@ function History() {
                       <th className="fw-semibold border-0">Date</th>
                       <th className="fw-semibold border-0">Time</th>
                       <th className="fw-semibold pe-4 border-0 rounded-end">Status</th>
+                      <th className="fw-semibold pe-4 border-0 rounded-end">Created By</th>
                     </tr>
                   </thead>
                   <tbody className="border-top-0">
@@ -307,6 +308,7 @@ function History() {
                             </span>
                           )}
                         </td>
+                        <td className="pe-4 text-dark fw-medium">({visitor.created_by_name || "-"})</td>
                       </tr>
                     ))}
                   </tbody>
