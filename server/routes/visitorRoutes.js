@@ -1,8 +1,9 @@
 const express = require("express");
 const router = express.Router();
 const db = require("../db");
+const authenticateToken = require("../middleware/authMiddleware");
 
-router.post("/", (req, res) => {
+router.post("/", authenticateToken, (req, res) => {
 
     const {
         visitor_name,
@@ -36,9 +37,10 @@ router.post("/", (req, res) => {
             person_to_meet,
             visit_date,
             in_time,
-            status
+            status,
+            created_by
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, CURDATE(), NOW(), 'Inside')
+        VALUES (?, ?, ?, ?, ?, ?, ?, CURDATE(), NOW(), 'Inside', ?)
     `;
 
 
@@ -49,7 +51,8 @@ router.post("/", (req, res) => {
         company_name || null,
         other_details || null,
         purpose,
-        person_to_meet
+        person_to_meet,
+        req.user.id
     ];
 
 
@@ -80,12 +83,15 @@ router.post("/", (req, res) => {
 
 router.get("/", (req, res) => {
 
-    const sql = `
-        SELECT *
-        FROM visitors
-        ORDER BY in_time DESC
-    `;
-
+   const sql = `
+    SELECT
+        v.*,
+        u.full_name AS created_by_name
+    FROM visitors v
+    LEFT JOIN users u
+        ON v.created_by = u.id
+    ORDER BY v.in_time DESC
+`;
 
     db.query(sql, (err, results) => {
 
@@ -125,21 +131,25 @@ router.get("/history/search", (req, res) => {
 
     let sql = `
         SELECT
-            id,
-            visitor_name,
-            address,
-            mobile,
-            company_name,
-            other_details,
-            purpose,
-            person_to_meet,
-            visit_date,
-            in_time,
-            out_time,
-            status
-        FROM visitors
+            v.id,
+            v.visitor_name,
+            v.address,
+            v.mobile,
+            v.company_name,
+            v.other_details,
+            v.purpose,
+            v.person_to_meet,
+            v.visit_date,
+            v.in_time,
+            v.out_time,
+            v.status,
+            v.created_by,
+            u.full_name AS created_by_name
+        FROM visitors v
+        LEFT JOIN users u
+            ON v.created_by = u.id
         WHERE 1 = 1
-    `;
+            `;
 
 
     const values = [];
@@ -253,23 +263,27 @@ router.get("/:id", (req, res) => {
     const visitorId = req.params.id;
 
     const sql = `
-        SELECT
-            id,
-            visitor_name,
-            address,
-            mobile,
-            company_name,
-            other_details,
-            purpose,
-            person_to_meet,
-            visit_date,
-            in_time,
-            out_time,
-            status,
-            created_at
-        FROM visitors
-        WHERE id = ?
-    `;
+     SELECT
+        v.id,
+        v.visitor_name,
+        v.address,
+        v.mobile,
+        v.company_name,
+        v.other_details,
+        v.purpose,
+        v.person_to_meet,
+        v.visit_date,
+        v.in_time,
+        v.out_time,
+        v.status,
+        v.created_at,
+        v.created_by,
+        u.full_name AS created_by_name
+    FROM visitors v
+    LEFT JOIN users u
+        ON v.created_by = u.id
+    WHERE v.id = ?
+`;
 
     db.query(sql, [visitorId], (err, results) => {
 
@@ -419,20 +433,24 @@ router.get("/reports/visitors", (req, res) => {
     const { from, to } = req.query;
 
     let sql = `
-        SELECT
-            id,
-            visitor_name,
-            mobile,
-            company_name,
-            purpose,
-            person_to_meet,
-            visit_date,
-            in_time,
-            out_time,
-            status
-        FROM visitors
-        WHERE 1 = 1
-    `;
+       SELECT
+            v.id,
+            v.visitor_name,
+            v.mobile,
+            v.company_name,
+            v.purpose,
+            v.person_to_meet,
+            v.visit_date,
+            v.in_time,
+            v.out_time,
+            v.status,
+            v.created_by,
+            u.full_name AS created_by_name
+        FROM visitors v
+        LEFT JOIN users u
+            ON v.created_by = u.id
+                WHERE 1 = 1
+            `;
 
     const values = [];
 
@@ -629,23 +647,25 @@ router.get("/dashboard/stats", (req, res) => {
 router.get("/dashboard/today", (req, res) => {
 
     const sql = `
-        SELECT
-            id,
-            visitor_name,
-            mobile,
-            company_name,
-            person_to_meet,
-            purpose,
-            in_time,
-            out_time,
-            status
+       SELECT
+            v.id,
+            v.visitor_name,
+            v.mobile,
+            v.company_name,
+            v.person_to_meet,
+            v.purpose,
+            v.in_time,
+            v.out_time,
+            v.status,
+            v.created_by,
+            u.full_name AS created_by_name
+        FROM visitors v
+        LEFT JOIN users u
+            ON v.created_by = u.id
+                WHERE visit_date = CURDATE()
 
-        FROM visitors
-
-        WHERE visit_date = CURDATE()
-
-        ORDER BY in_time DESC
-    `;
+                ORDER BY in_time DESC
+            `;
 
 
     db.query(sql, (err, results) => {
