@@ -6,6 +6,11 @@ function Visitors({ onViewVisitor, onNewVisitor }) {
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [selectedVisitorForCheckout, setSelectedVisitorForCheckout] = useState(null);
+  const [timeMode, setTimeMode] = useState("default"); 
+  const [manualDateTime, setManualDateTime] = useState("");
+  const [checkoutError, setCheckoutError] = useState("");
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
 
   const fetchVisitors = async () => {
     try {
@@ -32,28 +37,76 @@ function Visitors({ onViewVisitor, onNewVisitor }) {
     fetchVisitors();
   }, []);
 
-  const handleCheckout = async (id) => {
-    const confirmCheckout = window.confirm(
-      "Are you sure you want to check out this visitor?"
-    );
+  const formatForDateTimeInput = (dateObj) => {
+    const offset = dateObj.getTimezoneOffset() * 60000;
+    return new Date(dateObj.getTime() - offset).toISOString().slice(0, 16);
+  };
 
-    if (!confirmCheckout) return;
+  const openCheckoutModal = (visitor) => {
+    setSelectedVisitorForCheckout(visitor);
+    setTimeMode("default");
+    setCheckoutError("");
+    const now = new Date();
+    const inDate = new Date(visitor.in_time);
+    const initialPickerDate = now < inDate ? inDate : now;
+    setManualDateTime(formatForDateTimeInput(initialPickerDate));
+  };
 
+  const handleConfirmCheckout = async () => {
+    if (!selectedVisitorForCheckout) return;
+    setCheckoutError("");
+    const inTime = new Date(selectedVisitorForCheckout.in_time);
+    let selectedOutTime;
+
+    if (timeMode === "default") {
+      selectedOutTime = new Date();
+    } else {
+      if (!manualDateTime) {
+        setCheckoutError("Please select a valid check-out date and time.");
+        return;
+      }
+      selectedOutTime = new Date(manualDateTime);
+    }
+
+    if (selectedOutTime <= inTime) {
+      setCheckoutError(
+        `Check-out time cannot be earlier than or equal to check-in time (${formatDateTime(
+          selectedVisitorForCheckout.in_time
+        )}).`
+      );
+      return;
+    }
+
+    setCheckoutLoading(true);
     try {
-      const response = await apiFetch(`/api/visitors/${id}/checkout`, {
-        method: "PUT"
+      const payload = {};
+      if (timeMode === "manual" && manualDateTime) {
+        payload.out_time = manualDateTime.replace("T", " ") + ":00";
+      }
+
+      const response = await apiFetch(`/api/visitors/${selectedVisitorForCheckout.id}/checkout`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(payload)
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || "Checkout failed");
+        setCheckoutError(data.message || "Checkout failed. Please try again.");
+        setCheckoutLoading(false);
+        return;
       }
 
+      setSelectedVisitorForCheckout(null);
       fetchVisitors();
     } catch (err) {
-      console.error(err);
-      alert(err.message);
+      console.error("Checkout caught error:", err);
+    setCheckoutError(err.message || "An unexpected error occurred.");
+    } finally {
+      setCheckoutLoading(false);
     }
   };
 
@@ -114,8 +167,15 @@ function Visitors({ onViewVisitor, onNewVisitor }) {
     </svg>
   );
 
+  const clockIcon = (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#dc3545" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10" />
+      <polyline points="12 6 12 12 16 14" />
+    </svg>
+  );
+
   return (
-    <div className="p-4 bg-light min-vh-100">
+    <div className="p-4 bg-light min-vh-100 position-relative">
       {/* Top Header */}
       <div className="d-flex justify-content-between align-items-center mb-4">
         {/* <div>
@@ -251,7 +311,7 @@ function Visitors({ onViewVisitor, onNewVisitor }) {
                           {visitor.status === "Inside" && (
                             <button
                               className="btn btn-sm btn-danger shadow-sm d-flex align-items-center gap-1 rounded-3 px-3 py-1 fw-medium"
-                              onClick={() => handleCheckout(visitor.id)}
+                              onClick={() => openCheckoutModal(visitor)}
                               style={{ fontSize: "0.8rem" }}
                             >
                               {logOutIcon}
@@ -268,6 +328,111 @@ function Visitors({ onViewVisitor, onNewVisitor }) {
           )}
         </div>
       </div>
+
+      {selectedVisitorForCheckout && (
+        <div 
+          className="modal fade show d-block" 
+          tabIndex="-1" 
+          style={{ backgroundColor: "rgba(0,0,0,0.5)", zIndex: 1050 }}
+        >
+          <div className="modal-dialog modal-dialog-centered" style={{ maxWidth: "450px" }}>
+            <div className="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+              <div className="modal-header border-bottom py-3 px-4 bg-light">
+                <div className="d-flex align-items-center gap-2">
+                  <div className="bg-danger bg-opacity-10 p-2 rounded-3 text-danger d-flex align-items-center justify-content-center">
+                    {clockIcon}
+                  </div>
+                  <h6 className="modal-title fw-bold text-dark mb-0">Check Out Visitor</h6>
+                </div>
+                <button 
+                  type="button" 
+                  className="btn-close" 
+                  onClick={() => setSelectedVisitorForCheckout(null)}
+                />
+              </div>
+
+              <div className="modal-body p-4">
+                {checkoutError && (
+                    <div className="alert alert-danger py-2 px-3 small border-0 rounded-3 mb-3 fw-medium">
+                      {checkoutError}
+                    </div>
+                )}
+                <p className="text-muted mb-3" style={{ fontSize: "0.85rem" }}>
+                  Confirm checkout for <strong>{selectedVisitorForCheckout.visitor_name}</strong> (Pass #{selectedVisitorForCheckout.id}) and choose the checkout timestamp.
+                </p>
+
+                <div className="d-flex flex-column gap-3">
+                  {/* Default Time Option */}
+                  <label className={`p-3 border rounded-3 d-flex align-items-start gap-3 cursor-pointer ${timeMode === "default" ? "border-danger bg-danger bg-opacity-10" : "bg-light"}`}>
+                    <input
+                      type="radio"
+                      name="checkout_time_type"
+                      checked={timeMode === "default"}
+                      onChange={() => setTimeMode("default")}
+                      className="form-check-input mt-1"
+                    />
+                    <div>
+                      <div className="fw-semibold text-dark" style={{ fontSize: "0.9rem" }}>Current System Time (Default)</div>
+                      {/* <small className="text-muted" style={{ fontSize: "0.78rem" }}>
+                        Record the current date and time as the checkout timestamp.
+                      </small> */}
+                    </div>
+                  </label>
+
+                  {/* Manual Time Option */}
+                  <label className={`p-3 border rounded-3 d-flex align-items-start gap-3 cursor-pointer ${timeMode === "manual" ? "border-danger bg-danger bg-opacity-10" : "bg-light"}`}>
+                    <input
+                      type="radio"
+                      name="checkout_time_type"
+                      checked={timeMode === "manual"}
+                      onChange={() => setTimeMode("manual")}
+                      className="form-check-input mt-1"
+                    />
+                    <div className="w-100">
+                      <div className="fw-semibold text-dark" style={{ fontSize: "0.9rem" }}>Custom / Manual Time</div>
+                      {/* <small className="text-muted d-block mb-2" style={{ fontSize: "0.78rem" }}>
+                        Specify a past or backdated exit timestamp.
+                      </small> */}
+
+                      {timeMode === "manual" && (
+                        <div className="mt-2">
+                          <input
+                            type="datetime-local"
+                            value={manualDateTime}
+                            onChange={(e) => setManualDateTime(e.target.value)}
+                            className="form-control form-control-sm bg-white border"
+                            required
+                            style={{ fontSize: "0.85rem" }}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              <div className="modal-footer border-top py-2 px-4 bg-light d-flex justify-content-end gap-2">
+                <button
+                  type="button"
+                  className="btn btn-sm btn-outline-secondary rounded-3 px-3"
+                  onClick={() => setSelectedVisitorForCheckout(null)}
+                  disabled={checkoutLoading}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-sm btn-danger rounded-3 px-4 fw-medium shadow-sm"
+                  onClick={handleConfirmCheckout}
+                  disabled={checkoutLoading}
+                >
+                  {checkoutLoading ? "Checking Out..." : "Confirm & Check Out"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <style>{`
         .spin-animation {

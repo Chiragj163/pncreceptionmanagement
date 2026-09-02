@@ -12,7 +12,8 @@ router.post("/", authenticateToken, (req, res) => {
         company_name,
         other_details,
         purpose,
-        person_to_meet
+        person_to_meet,
+        in_time
     } = req.body;
 
     if (!visitor_name || !mobile || !purpose || !person_to_meet) {
@@ -25,7 +26,23 @@ router.post("/", authenticateToken, (req, res) => {
     }
 
 
-    const sql = `
+    const sql =  in_time ? `
+        INSERT INTO visitors
+        (
+            visitor_name,
+            address,
+            mobile,
+            company_name,
+            other_details,
+            purpose,
+            person_to_meet,
+            visit_date,
+            in_time,
+            status,
+            created_by
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, DATE(?), ?, 'Inside', ?)
+    ` : `
         INSERT INTO visitors
         (
             visitor_name,
@@ -44,7 +61,20 @@ router.post("/", authenticateToken, (req, res) => {
     `;
 
 
-    const values = [
+    const values =in_time
+     ?[
+        visitor_name,
+        address || null,
+        mobile,
+        company_name || null,
+        other_details || null,
+        purpose,
+        person_to_meet,
+        in_time,
+        in_time,
+        req.user.id
+    ]
+    :[
         visitor_name,
         address || null,
         mobile,
@@ -524,46 +554,76 @@ router.get("/reports/visitors", (req, res) => {
 router.put("/:id/checkout", (req, res) => {
 
     const visitorId = req.params.id;
-
-    const sql = `
-        UPDATE visitors
-        SET
-            out_time = NOW(),
-            status = 'Checked Out'
-        WHERE id = ?
-        AND status = 'Inside'
-    `;
-
-    db.query(sql, [visitorId], (err, result) => {
-
-        if (err) {
-
-            console.error("Checkout error:", err);
-
-            return res.status(500).json({
-                success: false,
-                message: "Failed to check out visitor",
-                error: err.message
-            });
-
+    const { out_time } = req.body;
+    const checkSql = "SELECT in_time FROM visitors WHERE id = ? AND status = 'Inside'";
+    db.query(checkSql, [visitorId], (checkErr, results) => {
+        if (checkErr) {
+            console.error("Fetch visitor error:", checkErr);
+            return res.status(500).json({ success: false, message: "Database error", error: checkErr.message });
         }
 
-
-        if (result.affectedRows === 0) {
-
-            return res.status(404).json({
-                success: false,
-                message: "Visitor not found or already checked out"
-            });
-
+        if (results.length === 0) {
+            return res.status(404).json({ success: false, message: "Visitor not found or already checked out" });
         }
 
+        const inTime = new Date(results[0].in_time);
+        const checkOutTime = out_time ? new Date(out_time) : new Date();
 
-        res.json({
-            success: true,
-            message: "Visitor checked out successfully"
+        if (checkOutTime <= inTime) {
+            return res.status(400).json({
+                success: false,
+                message: "Check-out time cannot be earlier than or equal to check-in time."
+            });
+        }
+
+        const sql = out_time ? `
+            UPDATE visitors
+            SET
+                out_time = ?,
+                status = 'Checked Out'
+            WHERE id = ?
+            AND status = 'Inside'
+        ` : `
+            UPDATE visitors
+            SET
+                out_time = NOW(),
+                status = 'Checked Out'
+            WHERE id = ?
+            AND status = 'Inside'
+        `;
+        const values = out_time ? [out_time, visitorId] : [visitorId];
+
+        db.query(sql, values , (err, result) => {
+
+            if (err) {
+
+                console.error("Checkout error:", err);
+
+                return res.status(500).json({
+                    success: false,
+                    message: "Failed to check out visitor",
+                    error: err.message
+                });
+
+            }
+
+
+            if (result.affectedRows === 0) {
+
+                return res.status(404).json({
+                    success: false,
+                    message: "Visitor not found or already checked out"
+                });
+
+            }
+
+
+            res.json({
+                success: true,
+                message: "Visitor checked out successfully"
+            });
+
         });
-
     });
 
 });
