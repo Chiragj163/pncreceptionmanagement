@@ -2,6 +2,14 @@ const express = require("express");
 const router = express.Router();
 const db = require("../db");
 const authenticateToken = require("../middleware/authMiddleware");
+const normalizeDateTime = (dtStr) => {
+    if (!dtStr) return null;
+    let clean = dtStr.replace("T", " ").trim();
+    if (clean.length === 16) {
+        clean += ":00"; // add seconds if missing from datetime-local input
+    }
+    return clean;
+};
 
 router.post("/", authenticateToken, (req, res) => {
 
@@ -24,9 +32,11 @@ router.post("/", authenticateToken, (req, res) => {
         });
 
     }
+    const formattedInTime = normalizeDateTime(in_time);
+    const formattedVisitDate = formattedInTime ? formattedInTime.split(" ")[0] : null;
 
 
-    const sql =  in_time ? `
+    const sql =  formattedInTime ? `
         INSERT INTO visitors
         (
             visitor_name,
@@ -41,7 +51,7 @@ router.post("/", authenticateToken, (req, res) => {
             status,
             created_by
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, DATE(?), ?, 'Inside', ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Inside', ?)
     ` : `
         INSERT INTO visitors
         (
@@ -61,7 +71,7 @@ router.post("/", authenticateToken, (req, res) => {
     `;
 
 
-    const values =in_time
+    const values =formattedInTime
      ?[
         visitor_name,
         address || null,
@@ -133,10 +143,7 @@ router.get("/", (req, res) => {
                 success: false,
                 message: "Failed to fetch visitors"
             });
-
         }
-
-
         res.json({
             success: true,
             visitors: results
@@ -146,7 +153,6 @@ router.get("/", (req, res) => {
 
 });
 
-// Visitor history search
 router.get("/history/search", (req, res) => {
 
     const {
@@ -566,17 +572,30 @@ router.put("/:id/checkout", (req, res) => {
             return res.status(404).json({ success: false, message: "Visitor not found or already checked out" });
         }
 
-        const inTime = new Date(results[0].in_time);
-        const checkOutTime = out_time ? new Date(out_time) : new Date();
+        // const inTime = new Date(results[0].in_time);
+        // const checkOutTime = out_time ? new Date(out_time) : new Date();
+        const formattedOutTime = normalizeDateTime(out_time);
+        const dbInTimeStr = normalizeDateTime(
+            typeof results[0].in_time === "string" 
+                ? results[0].in_time 
+                : new Date(results[0].in_time).toISOString().slice(0, 19).replace("T", " ")
+        );
 
-        if (checkOutTime <= inTime) {
+        if (formattedOutTime && formattedOutTime <= dbInTimeStr) {
             return res.status(400).json({
                 success: false,
                 message: "Check-out time cannot be earlier than or equal to check-in time."
             });
         }
 
-        const sql = out_time ? `
+        // if (checkOutTime <= inTime) {
+        //     return res.status(400).json({
+        //         success: false,
+        //         message: "Check-out time cannot be earlier than or equal to check-in time."
+        //     });
+        // }
+
+        const sql = formattedOutTime ? `
             UPDATE visitors
             SET
                 out_time = ?,
@@ -591,7 +610,7 @@ router.put("/:id/checkout", (req, res) => {
             WHERE id = ?
             AND status = 'Inside'
         `;
-        const values = out_time ? [out_time, visitorId] : [visitorId];
+        const values = formattedOutTime ? [formattedOutTime, visitorId] : [visitorId];
 
         db.query(sql, values , (err, result) => {
 
@@ -607,7 +626,6 @@ router.put("/:id/checkout", (req, res) => {
 
             }
 
-
             if (result.affectedRows === 0) {
 
                 return res.status(404).json({
@@ -617,15 +635,12 @@ router.put("/:id/checkout", (req, res) => {
 
             }
 
-
             res.json({
                 success: true,
                 message: "Visitor checked out successfully"
             });
-
         });
     });
-
 });
 
 router.get("/dashboard/stats", (req, res) => {
@@ -674,34 +689,23 @@ router.get("/dashboard/stats", (req, res) => {
 
         }
 
-
         const stats = results[0];
 
-
         res.json({
-
             success: true,
-
             stats: {
-
                 totalToday: Number(
                     stats.total_today || 0
                 ),
-
                 currentlyInside: Number(
                     stats.currently_inside || 0
                 ),
-
                 checkedOut: Number(
                     stats.checked_out || 0
                 )
-
             }
-
         });
-
     });
-
 });
 
 router.get("/dashboard/today", (req, res) => {
@@ -727,36 +731,23 @@ router.get("/dashboard/today", (req, res) => {
                 ORDER BY in_time DESC
             `;
 
-
     db.query(sql, (err, results) => {
-
         if (err) {
-
             console.error(
                 "Today's visitors error:",
                 err
             );
-
             return res.status(500).json({
                 success: false,
                 message: "Failed to fetch today's visitors",
                 error: err.message
             });
-
         }
 
-
         res.json({
-
             success: true,
-
             visitors: results
-
         });
-
     });
-
 });
-
-
 module.exports = router;
